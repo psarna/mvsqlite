@@ -5,7 +5,7 @@ build-preload: preload.o shim.o
 		-Wl,-z,noexecstack \
 		-o libmvsqlite_preload.so \
 		preload.o shim.o \
-		-L../target/release -lmvsqlite -lsqlite3 -lssl -lcrypto -lpthread -ldl -lm
+		-L/home/sarna/libsql/.libs -L../target/release -lmvsqlite -lsqlite3 -lssl -lcrypto -lpthread -ldl -lm
 
 build-lib: shim.o
 	ar rcs libmvsqlite.a shim.o
