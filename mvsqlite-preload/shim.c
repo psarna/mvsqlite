@@ -18,6 +18,13 @@ typedef int (*sqlite3_open_v2_fn)(
     int flags,              /* Flags */
     const char *zVfs        /* Name of VFS module to use */
 );
+typedef int (*libsql_open_fn)(
+    const char *filename,   /* Database filename (UTF-8) */
+    sqlite3 **ppDb,            /* OUT: SQLite db handle */
+    int flags,              /* Flags */
+    const char *zVfs,       /* Name of VFS module to use */
+    const char *zWal        /* Name of WAL methods to use */
+);
 typedef int (*sqlite3_step_fn)(sqlite3_stmt *pStmt);
 
 #ifdef MV_STATIC_PATCH
@@ -30,6 +37,7 @@ int real_sqlite3_open_v2(
 int real_sqlite3_step(sqlite3_stmt *pStmt);
 #else
 static sqlite3_open_v2_fn real_sqlite3_open_v2 = NULL;
+static libsql_open_fn real_libsql_open = NULL;
 static sqlite3_step_fn real_sqlite3_step = NULL;
 #endif
 
@@ -37,6 +45,7 @@ static int mvsqlite_enabled = 0;
 
 void mvsqlite_global_init(void) {
     mvsqlite_enabled = 1;
+    fprintf(stderr, "enabled\n");
 }
 
 static void bootstrap(void) {
@@ -47,19 +56,45 @@ static void bootstrap(void) {
         exit(1);
     }
 
+    real_libsql_open = dlsym(RTLD_NEXT, "libsql_open");
+    if (real_libsql_open == NULL) {
+        fprintf(stderr, "Failed to find real libsql_open\n");
+        exit(1);
+    }
+
     real_sqlite3_step = dlsym(RTLD_NEXT, "sqlite3_step");
     if (real_sqlite3_step == NULL) {
         fprintf(stderr, "Failed to find real sqlite3_step\n");
         exit(1);
     }
+    fprintf(stderr, "static patch ended\n");
 #endif
-
+    fprintf(stderr, "initializing if enabled\n");
     if(mvsqlite_enabled) {
+        fprintf(stderr, "initializing\n");
         init_mvsqlite();
     }
 }
 
 static pthread_once_t vfs_init = PTHREAD_ONCE_INIT;
+
+int libsql_open(
+    const char *filename,   /* Database filename (UTF-8) */
+    sqlite3 **ppDb,            /* OUT: SQLite db handle */
+    int flags,              /* Flags */
+    const char *zVfs,       /* Name of VFS module to use */
+    const char *zWal        /* Name of WAL methods to use */
+) {
+    int ret;
+    fprintf(stderr, "in libsql_open\n");
+
+    pthread_once(&vfs_init, bootstrap);
+    ret = real_libsql_open(filename, ppDb, flags, zVfs, zWal);
+    if(ret == SQLITE_OK && mvsqlite_enabled) {
+        init_mvsqlite_connection(*ppDb);
+    }
+    return ret;
+}
 
 int sqlite3_open_v2(
     const char *filename,   /* Database filename (UTF-8) */
@@ -68,6 +103,7 @@ int sqlite3_open_v2(
     const char *zVfs        /* Name of VFS module to use */
 ) {
     int ret;
+    fprintf(stderr, "in sqlite3_open_v2\n");
 
     pthread_once(&vfs_init, bootstrap);
     ret = real_sqlite3_open_v2(filename, ppDb, flags, zVfs);
@@ -81,6 +117,7 @@ int sqlite3_open(
     const char *filename,   /* Database filename (UTF-8) */
     sqlite3 **ppDb          /* OUT: SQLite db handle */
 ) {
+    fprintf(stderr, "in sqlite3_open\n");
     return sqlite3_open_v2(filename, ppDb, SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE, NULL);
 }
 
