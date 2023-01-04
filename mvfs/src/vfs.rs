@@ -567,9 +567,8 @@ impl Connection {
                     panic!("attempting to change page size");
                 }
 
-                if buf[18] == 2 || buf[19] == 2 {
-                    panic!("attempting to enable wal mode");
-                }
+                // There used to be an assertion here preventing WAL mode,
+                // but with mWAL, WAL mode is exactly what needs to be enabled
 
                 buf[24..28].copy_from_slice(&[0u8; 4]);
                 buf[92..96].copy_from_slice(&[0u8; 4]);
