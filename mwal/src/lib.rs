@@ -1,7 +1,7 @@
 #![allow(non_snake_case)]
 #![allow(clippy::not_unsafe_ptr_arg_deref)]
 
-mod ffi;
+pub mod ffi;
 
 use crate::ffi::{libsql_wal_methods, sqlite3_file, sqlite3_vfs, PgHdr, Wal};
 use std::collections::HashMap;
@@ -491,45 +491,59 @@ pub extern "C" fn mwal_init() {
     tracing::info!("mWAL module initialized");
 }
 
+impl libsql_wal_methods {
+    pub fn new() -> Self {
+        let vwal_name: *const u8 = "mwal\0".as_ptr();
+
+        Self {
+            iVersion: 1,
+            xOpen,
+            xClose,
+            xLimit,
+            xBeginReadTransaction,
+            xEndReadTransaction,
+            xFindFrame,
+            xReadFrame,
+            xDbSize,
+            xBeginWriteTransaction,
+            xEndWriteTransaction,
+            xUndo,
+            xSavepoint,
+            xSavepointUndo,
+            xFrames,
+            xCheckpoint,
+            xCallback,
+            xExclusiveMode,
+            xHeapMemory,
+            snapshot_get_stub: std::ptr::null(),
+            snapshot_open_stub: std::ptr::null(),
+            snapshot_recover_stub: std::ptr::null(),
+            snapshot_check_stub: std::ptr::null(),
+            snapshot_unlock_stub: std::ptr::null(),
+            framesize_stub: std::ptr::null(),
+            xFile,
+            write_lock_stub: std::ptr::null(),
+            xDb,
+            xPathnameLen,
+            xGetPathname,
+            xPreMainDbOpen,
+            name: vwal_name,
+            b_uses_shm: 0,
+            p_next: std::ptr::null(),
+        }
+    }
+}
+
+impl Default for libsql_wal_methods {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+unsafe impl Send for libsql_wal_methods {}
+
 #[tracing::instrument]
 #[no_mangle]
 pub extern "C" fn mwal_methods() -> *const libsql_wal_methods {
-    let vwal_name: *const u8 = "mwal\0".as_ptr();
-
-    Box::into_raw(Box::new(libsql_wal_methods {
-        iVersion: 1,
-        xOpen,
-        xClose,
-        xLimit,
-        xBeginReadTransaction,
-        xEndReadTransaction,
-        xFindFrame,
-        xReadFrame,
-        xDbSize,
-        xBeginWriteTransaction,
-        xEndWriteTransaction,
-        xUndo,
-        xSavepoint,
-        xSavepointUndo,
-        xFrames,
-        xCheckpoint,
-        xCallback,
-        xExclusiveMode,
-        xHeapMemory,
-        snapshot_get_stub: std::ptr::null(),
-        snapshot_open_stub: std::ptr::null(),
-        snapshot_recover_stub: std::ptr::null(),
-        snapshot_check_stub: std::ptr::null(),
-        snapshot_unlock_stub: std::ptr::null(),
-        framesize_stub: std::ptr::null(),
-        xFile,
-        write_lock_stub: std::ptr::null(),
-        xDb,
-        xPathnameLen,
-        xGetPathname,
-        xPreMainDbOpen,
-        name: vwal_name,
-        b_uses_shm: 0,
-        p_next: std::ptr::null(),
-    }))
+    Box::into_raw(Box::new(libsql_wal_methods::new()))
 }
