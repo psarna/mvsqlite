@@ -5,7 +5,7 @@ pub mod ffi;
 
 use crate::ffi::{libsql_wal_methods, sqlite3_file, sqlite3_vfs, PgHdr, Wal};
 use std::collections::HashMap;
-use std::ffi::c_void;
+use std::ffi::{c_char, c_void};
 use std::sync::Arc;
 
 fn instantiate_mvfs() -> mvfs::MultiVersionVfs {
@@ -114,7 +114,7 @@ const WAL_HEAPMEMORY_MODE: u8 = 2;
 pub extern "C" fn xOpen(
     vfs: *const sqlite3_vfs,
     _db_file: *mut sqlite3_file,
-    wal_name: *const i8,
+    wal_name: *const c_char,
     no_shm_mode: i32,
     max_size: i64,
     methods: *mut libsql_wal_methods,
@@ -478,7 +478,7 @@ pub extern "C" fn xGetPathname(buf: *mut u8, orig: *const u8, orig_len: i32) {
     unsafe { std::ptr::copy("-wal".as_ptr(), buf.offset(orig_len as isize), 4) }
 }
 
-pub extern "C" fn xPreMainDbOpen(_methods: *mut libsql_wal_methods, path: *const i8) -> i32 {
+pub extern "C" fn xPreMainDbOpen(_methods: *mut libsql_wal_methods, path: *const c_char) -> i32 {
     tracing::trace!("Database {:?} is going to be soon", unsafe {
         std::ffi::CStr::from_ptr(path)
     });
