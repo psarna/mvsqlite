@@ -1,4 +1,4 @@
-use std::ffi::c_void;
+use std::ffi::{c_char, c_void};
 
 pub const SQLITE_OK: i32 = 0;
 pub const SQLITE_BUSY: i32 = 5;
@@ -28,7 +28,7 @@ pub struct sqlite3_vfs {
     pData: *const c_void,
     xOpen: unsafe extern "C" fn(
         vfs: *mut sqlite3_vfs,
-        name: *const i8,
+        name: *const c_char,
         file: *mut sqlite3_file,
         flags: i32,
         out_flags: *mut i32,
@@ -123,7 +123,7 @@ pub struct Wal {
     pub(crate) hdr: WalIndexHdr,
     pub(crate) min_frame: u32,
     pub(crate) recalculate_checksums: u32,
-    pub(crate) wal_name: *const i8,
+    pub(crate) wal_name: *const c_char,
     pub(crate) n_checkpoints: u32,
     pub(crate) lock_error: u8,
     pub(crate) p_snapshot: *const c_void,
@@ -153,7 +153,7 @@ pub struct libsql_wal_methods {
     pub xOpen: extern "C" fn(
         vfs: *const sqlite3_vfs,
         file: *mut sqlite3_file,
-        wal_name: *const i8,
+        wal_name: *const c_char,
         no_shm_mode: i32,
         max_size: i64,
         methods: *mut libsql_wal_methods,
@@ -215,8 +215,8 @@ pub struct libsql_wal_methods {
     pub write_lock_stub: *const c_void, // setlk stub
     pub xDb: extern "C" fn(wal: *mut Wal, db: *const c_void),
     pub xPathnameLen: extern "C" fn(orig_len: i32) -> i32,
-    pub xGetPathname: extern "C" fn(buf: *mut u8, orig: *const u8, orig_len: i32),
-    pub xPreMainDbOpen: extern "C" fn(methods: *mut libsql_wal_methods, path: *const i8) -> i32,
+    pub xGetPathname: extern "C" fn(buf: *mut c_char, orig: *const c_char, orig_len: i32),
+    pub xPreMainDbOpen: extern "C" fn(methods: *mut libsql_wal_methods, path: *const c_char) -> i32,
     pub b_uses_shm: i32,
     pub name: *const u8,
     pub p_next: *const c_void,
