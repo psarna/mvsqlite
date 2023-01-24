@@ -473,9 +473,15 @@ pub extern "C" fn xPathnameLen(orig_len: i32) -> i32 {
     orig_len + 4
 }
 
-pub extern "C" fn xGetPathname(buf: *mut u8, orig: *const u8, orig_len: i32) {
+pub extern "C" fn xGetPathname(buf: *mut c_char, orig: *const c_char, orig_len: i32) {
     unsafe { std::ptr::copy(orig, buf, orig_len as usize) }
-    unsafe { std::ptr::copy("-wal".as_ptr(), buf.offset(orig_len as isize), 4) }
+    unsafe {
+        std::ptr::copy(
+            "-wal".as_ptr(),
+            (buf as *mut u8).offset(orig_len as isize),
+            4,
+        )
+    }
 }
 
 pub extern "C" fn xPreMainDbOpen(_methods: *mut libsql_wal_methods, path: *const c_char) -> i32 {
